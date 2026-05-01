@@ -24,17 +24,24 @@ const Overview = () => {
 
   const handlePredict = async () => {
     setLoading(true);
+    setPrediction(null); // Clear stale data immediately
     try {
       const backendUrl = `http://${window.location.hostname}:8000`;
+      console.log(`Fetching prediction for ${state}...`);
       const response = await axios.post(`${backendUrl}/predict/seats`, {
         state: state,
         year: year,
         model_type: model,
         options: options
-      }, { timeout: 10000 });
-      setPrediction(response.data);
+      }, { timeout: 15000 });
+      
+      if (response.data) {
+        setPrediction(response.data);
+        console.log("Prediction received:", response.data);
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Simulation error:", err);
+      // Optional: Add a simple error state if needed
     } finally {
       setLoading(false);
     }
@@ -51,12 +58,12 @@ const Overview = () => {
   };
 
   const renderMap = () => {
-    // Define simplified paths for the four states to make it look like actual map tiles
+    // High-fidelity simplified paths for the four states
     const statePaths = {
-      'West Bengal': "M150,50 L180,80 L170,120 L190,160 L160,200 L140,180 L120,220 L100,200 L110,150 L130,100 Z",
-      'Assam': "M50,150 L150,130 L250,140 L300,160 L280,200 L200,220 L100,210 L50,180 Z",
-      'Tamil Nadu': "M150,200 L200,220 L220,300 L180,380 L140,350 L120,300 L130,250 Z",
-      'Kerala': "M120,220 L150,250 L140,320 L120,380 L100,350 L110,280 Z"
+      'West Bengal': "M180,20 L200,40 L190,80 L220,120 L200,160 L240,180 L220,240 L180,260 L140,300 L120,380 L80,350 L100,280 L60,240 L80,180 L40,140 L80,100 L120,80 Z",
+      'Assam': "M20,150 L100,120 L200,130 L350,150 L380,200 L320,250 L200,280 L100,260 L20,200 Z",
+      'Tamil Nadu': "M150,150 L250,180 L280,250 L250,350 L200,380 L120,350 L100,250 L120,180 Z",
+      'Kerala': "M100,150 L130,180 L140,250 L120,380 L80,360 L70,280 L80,200 Z"
     };
 
     return (
@@ -77,59 +84,87 @@ const Overview = () => {
         
         <div className="relative h-full flex items-center justify-center">
           <svg viewBox="0 0 400 400" className="w-full h-full max-w-[400px]">
+            <defs>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                <feMerge>
+                  <feMergeNode in="coloredBlur"/>
+                  <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+              </filter>
+            </defs>
             <motion.path
               d={statePaths[state] || statePaths['West Bengal']}
-              fill={prediction?.seats?.[0]?.color || '#1e293b'}
-              fillOpacity={0.2}
+              fill="rgba(99, 102, 241, 0.05)"
               stroke="#6366f1"
-              strokeWidth={2}
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
+              strokeWidth={1.5}
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
             />
-            {/* Overlay interactive regions */}
+            {/* Interactive Constituency Points distributed within the state shape */}
             {prediction?.constituencies?.map((ac, i) => {
-              const angle = (i / (prediction.constituencies.length)) * Math.PI * 2;
-              const r = 80;
+              // Deterministic but "random-looking" points inside a 400x400 box
+              // We'll use a spiral distribution for better coverage
+              const angle = i * 2.4;
+              const r = 15 + i * 12;
               const x = 200 + Math.cos(angle) * r;
-              const y = 200 + Math.sin(angle) * r;
+              const y = 220 + Math.sin(angle) * r;
               
               return (
-                <motion.circle
+                <motion.g 
                   key={ac.id}
-                  cx={x} cy={y} r={15}
-                  fill={ac.color}
-                  fillOpacity={hoveredRegion === ac.id ? 1 : 0.7}
-                  stroke="#fff"
-                  strokeWidth={hoveredRegion === ac.id ? 2 : 0}
-                  onHoverStart={() => setHoveredRegion(ac.id)}
-                  onHoverEnd={() => setHoveredRegion(null)}
-                  whileHover={{ scale: 1.2 }}
-                  className="cursor-pointer"
-                />
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <circle
+                    cx={x} cy={y} r={hoveredRegion === ac.id ? 10 : 6}
+                    fill={ac.color}
+                    className="cursor-pointer transition-all duration-300"
+                    onMouseEnter={() => setHoveredRegion(ac.id)}
+                    onMouseLeave={() => setHoveredRegion(null)}
+                    filter={hoveredRegion === ac.id ? "url(#glow)" : "none"}
+                  />
+                  {hoveredRegion === ac.id && (
+                    <circle cx={x} cy={y} r={14} fill="none" stroke={ac.color} strokeWidth={1} className="animate-ping" />
+                  )}
+                </motion.g>
               );
             })}
           </svg>
 
           {hoveredRegion !== null && (
             <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="absolute top-4 right-4 glass-panel p-4 z-20 min-w-[200px] border-indigo-500/30"
+              initial={{ opacity: 0, scale: 0.9, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              className="absolute bottom-6 right-6 glass-panel p-5 z-20 min-w-[240px] border-indigo-500/50 shadow-2xl"
             >
               {(() => {
                 const ac = prediction?.constituencies?.find(c => c.id === hoveredRegion);
                 return (
                   <>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Constituency #{ac?.id + 100}</p>
-                    <h4 className="text-lg font-bold text-white mb-2">{ac?.name}</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-slate-400">Predicted Winner</span>
-                        <span className="text-xs font-bold" style={{ color: ac?.color }}>{ac?.winner}</span>
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Live Projection</span>
+                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                    </div>
+                    <h4 className="text-lg font-black text-white mb-1">{ac?.name}</h4>
+                    <p className="text-[10px] text-slate-500 uppercase mb-4">AC Index: #AC-{ac?.id + 100}</p>
+                    
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-2 border-b border-white/5">
+                        <span className="text-xs text-slate-400">Leading</span>
+                        <span className="text-xs font-black px-2 py-0.5 rounded" style={{ backgroundColor: `${ac?.color}20`, color: ac?.color }}>{ac?.winner}</span>
                       </div>
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center py-2 border-b border-white/5">
                         <span className="text-xs text-slate-400">Confidence</span>
                         <span className="text-xs font-bold text-white">{ac?.prob}%</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-xs text-slate-400">Projected Swing</span>
+                        <span className={`text-xs font-bold ${ac?.swing > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                          {ac?.swing > 0 ? '+' : ''}{ac?.swing}%
+                        </span>
                       </div>
                     </div>
                   </>
@@ -170,11 +205,12 @@ const Overview = () => {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <StatCard title="Total Seats" value={(getTargetSeats(state) || 0).toString()} icon={MapPin} color="indigo" />
         <StatCard title="Leading Party" value={prediction?.leading_party || "---"} icon={TrendingUp} color="emerald" />
         <StatCard title="Mean Probability" value={prediction?.mean_probability ? `${prediction.mean_probability}%` : "---"} icon={Brain} color="purple" />
         <StatCard title="Swing Factor" value={prediction?.swing_factor !== undefined ? `${prediction.swing_factor > 0 ? '+' : ''}${prediction.swing_factor}%` : "---"} icon={Activity} color="rose" />
+        <StatCard title="Simulation ID" value={prediction?.simulation_id || "---"} icon={Database} color="blue" />
       </div>
 
       <AnimatePresence mode="wait">

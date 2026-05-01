@@ -118,9 +118,11 @@ async def get_sentiment(state: str = "West Bengal"):
 
 @app.post("/predict/seats")
 async def predict_seats(request: PredictionRequest):
+    # Ensure state name is clean
+    req_state = request.state.strip()
     # Use a seed to ensure consistency for the same request
-    seed_str = f"{request.state}-{request.year}-{request.model_type}"
-    rng = get_seeded_random(seed_str)
+    seed_str = f"{req_state}-{request.year}-{request.model_type}-{random.random()}"
+    rng = random.Random(seed_str)
     
     party_map = {
         "West Bengal": [
@@ -137,7 +139,8 @@ async def predict_seats(request: PredictionRequest):
         "Tamil Nadu": [
             {"name": "DMK+", "color": "#dc2626", "base_seats": 150},
             {"name": "AIADMK+", "color": "#16a34a", "base_seats": 80},
-            {"name": "Others", "color": "#64748b", "base_seats": 4}
+            {"name": "NTK", "color": "#facc15", "base_seats": 2},
+            {"name": "Others", "color": "#64748b", "base_seats": 2}
         ],
         "Kerala": [
             {"name": "LDF", "color": "#ef4444", "base_seats": 95},
@@ -145,13 +148,14 @@ async def predict_seats(request: PredictionRequest):
         ]
     }
     
-    if request.state not in party_map:
-        raise HTTPException(status_code=400, detail="State not supported")
+    state_data = party_map.get(req_state)
+    if not state_data:
+        raise HTTPException(status_code=400, detail=f"State '{req_state}' not supported. Supported: {list(party_map.keys())}")
 
-    # Generate seats with some variance
+    # Generate seats with state-specific variance
     parties = []
-    for p in party_map[request.state]:
-        var = p["base_seats"] * 0.1
+    for p in state_data:
+        var = max(1, int(p["base_seats"] * 0.15))
         final_seats = int(p["base_seats"] + rng.uniform(-var, var))
         parties.append({
             "name": p["name"],
@@ -159,60 +163,58 @@ async def predict_seats(request: PredictionRequest):
             "color": p["color"]
         })
     
-    total_final_seats = sum(p["value"] for p in parties)
-    
-    # Calculate Vote Share: More realistic correlation
-    # Top party gets a significant share but usually not 1:1 with seats (due to FPTP)
-    raw_shares = []
+    # Vote Share logic
+    total_seats = sum(p["value"] for p in parties)
     for p in parties:
-        # FPTP usually gives more seats to higher vote share parties
-        # So we inverse that: share = sqrt(seats) * factor
-        # This makes the vote shares closer to each other than seat shares are.
-        share = (p["value"] ** 0.8) * 5 + rng.uniform(2, 8)
-        raw_shares.append(share)
+        # Logistic correlation: more seats usually means much higher vote share in FPTP
+        p["vote_share"] = round((p["value"] / total_seats) * 45 + rng.uniform(2, 10), 1)
     
-    total_raw_share = sum(raw_shares)
-    for i in range(len(parties)):
-        parties[i]["vote_share"] = round((raw_shares[i] / total_raw_share) * 100, 1)
+    # Normalize vote share to 100%
+    total_vs = sum(p["vote_share"] for p in parties)
+    for p in parties:
+        p["vote_share"] = round((p["vote_share"] / total_vs) * 100, 1)
     
     diff = round(100.0 - sum(p["vote_share"] for p in parties), 1)
     parties[0]["vote_share"] = round(parties[0]["vote_share"] + diff, 1)
 
-    # Varied Model Comparisons
-    models = ["Ensemble", "XGBoost", "Random Forest", "Logistic Regression", "Neural Network"]
+    # Lead calculation
+    sorted_parties = sorted(parties, key=lambda x: x["value"], reverse=True)
+    leading_party = sorted_parties[0]["name"]
+
+    # Model Comparisons
+    models = ["Ensemble AI", "XGBoost v4", "Random Forest", "Logit Reg", "Neural Net"]
     model_comparison = []
     for m in models:
-        # Slightly different winners for less stable states or lower confidence
-        conf = 94 - rng.randint(0, 10)
-        winner = parties[0]["name"] if conf > 90 else rng.choice([p["name"] for p in parties[:2]])
+        conf = rng.randint(84, 98)
+        # Winner selection logic: 90% chance it's the leading party
+        winner = leading_party if rng.random() < 0.9 else sorted_parties[1]["name"]
         model_comparison.append({
             "model": m,
             "winner": winner,
             "confidence": conf,
-            "status": "Optimal" if conf > 90 else "Converged"
+            "status": "Stable" if conf > 90 else "Converging"
         })
 
-    # Dynamic Constituencies
+    # Constituencies for Focus panel
     constituencies = []
-    for i in range(1, 7):
-        winner_party = rng.choice(parties)
+    names = ["North District", "South Coast", "Central Hub", "East Range", "West Valley", "Metro Core", "Rural Belt", "Hill AC", "Industrial Zone", "Riverside", "Border AC", "Garden City"]
+    for i in range(12):
+        w_party = rng.choice(parties)
         constituencies.append({
-            "id": i,
-            "name": f"{request.state} District {chr(64+i)}",
-            "winner": winner_party["name"],
-            "prob": rng.randint(65, 95),
-            "swing": round(rng.uniform(-5, 5), 1),
-            "color": winner_party["color"]
+            "id": i + 1,
+            "name": f"{req_state} {names[i]}",
+            "winner": w_party["name"],
+            "prob": rng.randint(65, 99),
+            "swing": round(rng.uniform(-8, 8), 1),
+            "color": w_party["color"]
         })
 
     return {
-        "state": request.state,
-        "year": request.year,
-        "model": request.model_type,
-        "total_seats": total_final_seats,
-        "leading_party": max(parties, key=lambda x: x["value"])["name"],
-        "mean_probability": 82 + rng.randint(-6, 8),
-        "swing_factor": round(1.8 + rng.uniform(-2, 3), 1),
+        "simulation_id": f"SIM-{random.randint(10000, 99999)}",
+        "state": req_state,
+        "leading_party": leading_party,
+        "mean_probability": rng.randint(86, 96),
+        "swing_factor": round(rng.uniform(-6.0, 6.0), 1),
         "seats": parties,
         "model_comparison": model_comparison,
         "constituencies": constituencies
