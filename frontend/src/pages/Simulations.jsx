@@ -25,24 +25,47 @@ const Simulations = () => {
     setTimeout(() => {
       const config = stateConfig[state];
       const newResults = [];
+      
+      // Seeded randomness for consistency if needed, but here we want organic variety
       for (let i = 0; i < iterations; i++) {
-        // Monte Carlo: Generate correlated outcomes
-        const base = Math.random();
-        const noiseX = (Math.random() - 0.5) * 15;
-        const noiseY = (Math.random() - 0.5) * 15;
+        // Monte Carlo: Use a more realistic correlated distribution
+        // Central Limit Theorem: sum of multiple randoms gives a bell curve
+        const bell = (Math.random() + Math.random() + Math.random() + Math.random()) / 4;
         
-        const x = config.xDomain[0] + (config.xDomain[1] - config.xDomain[0]) * base + noiseX;
-        const y = config.yDomain[1] - (config.yDomain[1] - config.yDomain[0]) * base + noiseY;
+        // Base seat calculation with strong negative correlation (one wins, other loses)
+        const totalRangeX = config.xDomain[1] - config.xDomain[0];
+        const totalRangeY = config.yDomain[1] - config.yDomain[0];
         
+        // Add non-linear "swing" factor
+        const swing = (Math.random() - 0.5) * 2;
+        const volatility = 1.0 + (Math.random() * 0.5);
+        
+        // Correlated x and y
+        let x = config.xDomain[0] + (totalRangeX * bell);
+        // Negative correlation: as x goes up, y tends to go down
+        let y = config.yDomain[1] - ((x - config.xDomain[0]) / totalRangeX) * totalRangeY;
+        
+        // Add independent noise to each axis to create the "cloud"
+        const noiseX = (Math.random() - 0.5) * 12 * volatility;
+        const noiseY = (Math.random() - 0.5) * 12 * volatility;
+        
+        x += noiseX + (swing * 5);
+        y += noiseY - (swing * 5);
+        
+        // Clamp to domains
+        x = Math.max(config.xDomain[0], Math.min(config.xDomain[1], x));
+        y = Math.max(config.yDomain[0], Math.min(config.yDomain[1], y));
+
         newResults.push({
           x: Math.round(x),
           y: Math.round(y),
-          id: i
+          id: i,
+          size: Math.random() * 5 + 2 // Varying size for visual depth
         });
       }
       setResults(newResults);
       setRunning(false);
-    }, 1500);
+    }, 1200);
   };
 
   const config = stateConfig[state];
@@ -107,12 +130,12 @@ const Simulations = () => {
                 >
                   <Label value={`${config.parties[1]} Seats`} angle={-90} position="insideLeft" offset={-10} fill="#f59e0b" fontSize={12} fontWeight={700} />
                 </YAxis>
-                <ZAxis type="number" range={[10, 10]} />
+                <ZAxis type="number" dataKey="size" range={[1, 15]} />
                 <Tooltip 
                   cursor={{ strokeDasharray: '3 3' }} 
                   contentStyle={{ backgroundColor: '#0f172a', border: 'none', borderRadius: '12px' }}
                 />
-                <Scatter name="Simulations" data={results} fill="#6366f1" fillOpacity={0.6} />
+                <Scatter name="Simulations" data={results} fill="#6366f1" fillOpacity={0.4} />
               </ScatterChart>
             </ResponsiveContainer>
           </div>

@@ -22,10 +22,6 @@ const Overview = () => {
   const [selectedConstituency, setSelectedConstituency] = useState(null);
   const [hoveredRegion, setHoveredRegion] = useState(null);
 
-  useEffect(() => {
-    handlePredict();
-  }, [state]);
-
   const handlePredict = async () => {
     setLoading(true);
     try {
@@ -44,17 +40,9 @@ const Overview = () => {
     }
   };
 
-  // Generate dynamic constituency data based on state to avoid static values
-  const getDynamicConstituencies = () => {
-    const seed = state.length;
-    return [
-      { id: 1, name: `${state} North`, winner: prediction?.seats[0]?.name || "TMC", prob: 85 + (seed % 10), swing: (seed % 5) + 1.2 },
-      { id: 2, name: `${state} South`, winner: prediction?.seats[1]?.name || "BJP", prob: 70 + (seed % 15), swing: (seed % 3) - 2.1 },
-      { id: 3, name: `${state} Central`, winner: prediction?.seats[0]?.name || "TMC", prob: 65 + (seed % 20), swing: (seed % 4) + 0.5 },
-      { id: 4, name: `${state} East`, winner: prediction?.seats[1]?.name || "BJP", prob: 80 + (seed % 8), swing: (seed % 6) + 2.8 },
-      { id: 5, name: `${state} West`, winner: prediction?.seats[0]?.name || "TMC", prob: 88 + (seed % 5), swing: (seed % 2) + 1.9 },
-    ];
-  };
+  useEffect(() => {
+    handlePredict();
+  }, [state]);
 
   const getTargetSeats = (s) => {
     const targets = { 'West Bengal': 294, 'Assam': 126, 'Tamil Nadu': 234, 'Kerala': 140 };
@@ -157,10 +145,10 @@ const Overview = () => {
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Total Seats" value={getTargetSeats(state).toString()} icon={MapPin} color="indigo" />
+        <StatCard title="Total Seats" value={(getTargetSeats(state) || 0).toString()} icon={MapPin} color="indigo" />
         <StatCard title="Leading Party" value={prediction?.leading_party || "---"} icon={TrendingUp} color="emerald" />
-        <StatCard title="Mean Probability" value={prediction ? `${prediction.mean_probability}%` : "---"} icon={Brain} color="purple" />
-        <StatCard title="Swing Factor" value={prediction ? `${prediction.swing_factor > 0 ? '+' : ''}${prediction.swing_factor}%` : "---"} icon={Activity} color="rose" />
+        <StatCard title="Mean Probability" value={prediction?.mean_probability ? `${prediction.mean_probability}%` : "---"} icon={Brain} color="purple" />
+        <StatCard title="Swing Factor" value={prediction?.swing_factor !== undefined ? `${prediction.swing_factor > 0 ? '+' : ''}${prediction.swing_factor}%` : "---"} icon={Activity} color="rose" />
       </div>
 
       <AnimatePresence mode="wait">
@@ -235,7 +223,7 @@ const Overview = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                  {getDynamicConstituencies().map(ac => (
+                  {prediction?.constituencies?.map(ac => (
                     <motion.div 
                       key={ac.id} whileHover={{ x: 5 }}
                       onClick={() => setSelectedConstituency(ac)}
@@ -252,11 +240,11 @@ const Overview = () => {
                           ac.swing > 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'
                         }`}>
                           {ac.swing > 0 ? <ArrowUpRight size={10} /> : <ArrowDownRight size={10} />}
-                          {Math.abs(ac.swing.toFixed(1))}% Swing
+                          {Math.abs(ac.swing).toFixed(1)}% Swing
                         </div>
                       </div>
                       <div className="flex justify-between items-center text-xs">
-                        <span className="text-slate-400">Winner: <span className="text-white font-bold">{ac.winner}</span></span>
+                        <span className="text-slate-400">Winner: <span className="font-bold" style={{ color: ac.color }}>{ac.winner}</span></span>
                         <span className="text-slate-400">Prob: <span className="text-indigo-400 font-bold">{ac.prob}%</span></span>
                       </div>
                     </motion.div>
@@ -284,7 +272,7 @@ const Overview = () => {
                       {prediction?.model_comparison?.map((m, i) => (
                         <tr key={i} className="hover:bg-white/5 transition-colors">
                           <td className="py-4 text-sm font-bold text-white">{m.model}</td>
-                          <td className="py-4 text-sm font-bold text-indigo-400">{prediction.leading_party}</td>
+                          <td className="py-4 text-sm font-bold text-indigo-400">{m.winner}</td>
                           <td className="py-4">
                             <div className="flex items-center gap-3">
                               <div className="w-24 h-1.5 bg-slate-900 rounded-full overflow-hidden">
@@ -294,7 +282,11 @@ const Overview = () => {
                             </div>
                           </td>
                           <td className="py-4">
-                            <span className="px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold uppercase">Optimal</span>
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                              m.status === 'Optimal' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'
+                            }`}>
+                              {m.status}
+                            </span>
                           </td>
                         </tr>
                       ))}

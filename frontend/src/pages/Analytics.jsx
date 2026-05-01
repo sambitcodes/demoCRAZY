@@ -45,17 +45,24 @@ const Analytics = () => {
           { title: 'Training Status', val: 'Completed', icon: CheckCircle2, color: 'emerald' },
           { title: 'Avg. Accuracy', val: '94.2%', icon: Cpu, color: 'indigo' },
           { title: 'Data Points', val: '1.2M+', icon: Database, color: 'rose' }
-        ].map((stat, i) => (
-          <div key={i} className="glass-panel p-6 flex items-center space-x-6">
-            <div className={`p-4 rounded-2xl bg-${stat.color}-500/10 text-${stat.color}-400`}>
-              <stat.icon size={24} />
+        ].map((stat, i) => {
+          const colorMap = {
+            emerald: 'bg-emerald-500/10 text-emerald-400',
+            indigo: 'bg-indigo-500/10 text-indigo-400',
+            rose: 'bg-rose-500/10 text-rose-400'
+          };
+          return (
+            <div key={i} className="glass-panel p-6 flex items-center space-x-6">
+              <div className={`p-4 rounded-2xl ${colorMap[stat.color]}`}>
+                <stat.icon size={24} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.title}</p>
+                <h4 className="text-2xl font-black text-white">{stat.val}</h4>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{stat.title}</p>
-              <h4 className="text-2xl font-black text-white">{stat.val}</h4>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
