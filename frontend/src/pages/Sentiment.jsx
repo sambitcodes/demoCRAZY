@@ -212,7 +212,7 @@ const Sentiment = () => {
               <Zap size={20} className="text-amber-400" /> Key Topic Scores
             </h3>
             <div className="space-y-5">
-              {sentimentData?.trends.map((trend, i) => (
+              {sentimentData?.trends?.map((trend, i) => (
                 <div key={i} className="space-y-2">
                   <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-400">
                     <span>{trend.topic}</span>
@@ -227,6 +227,7 @@ const Sentiment = () => {
                   </div>
                 </div>
               ))}
+              {!sentimentData && !loading && <div className="text-slate-600 text-sm italic">Run simulation for scores...</div>}
             </div>
           </div>
         </div>
