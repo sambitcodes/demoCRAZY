@@ -40,81 +40,107 @@ const Overview = () => {
     }
   };
 
-  useEffect(() => {
-    handlePredict();
-  }, [state]);
+  // Remove automatic fetch to withhold results until explicit simulation
+  // useEffect(() => {
+  //   handlePredict();
+  // }, [state]);
 
   const getTargetSeats = (s) => {
     const targets = { 'West Bengal': 294, 'Assam': 126, 'Tamil Nadu': 234, 'Kerala': 140 };
     return targets[s] || 0;
   };
 
-  const renderMap = () => (
-    <div className="glass-panel p-8 relative overflow-hidden h-[500px]">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold flex items-center gap-2">
-          <Map className="text-indigo-400" /> Interactive Forecast Map
-        </h3>
-        <div className="flex gap-2">
-          {prediction?.seats?.map(p => (
-            <div key={p.name} className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-              <span className="text-[10px] font-bold text-slate-500 uppercase">{p.name}</span>
-            </div>
-          ))}
+  const renderMap = () => {
+    // Define simplified paths for the four states to make it look like actual map tiles
+    const statePaths = {
+      'West Bengal': "M150,50 L180,80 L170,120 L190,160 L160,200 L140,180 L120,220 L100,200 L110,150 L130,100 Z",
+      'Assam': "M50,150 L150,130 L250,140 L300,160 L280,200 L200,220 L100,210 L50,180 Z",
+      'Tamil Nadu': "M150,200 L200,220 L220,300 L180,380 L140,350 L120,300 L130,250 Z",
+      'Kerala': "M120,220 L150,250 L140,320 L120,380 L100,350 L110,280 Z"
+    };
+
+    return (
+      <div className="glass-panel p-8 relative overflow-hidden h-[500px]">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-xl font-bold flex items-center gap-2">
+            <Map className="text-indigo-400" /> {state} Forecast Map
+          </h3>
+          <div className="flex gap-2">
+            {prediction?.seats?.map(p => (
+              <div key={p.name} className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                <span className="text-[10px] font-bold text-slate-500 uppercase">{p.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        
+        <div className="relative h-full flex items-center justify-center">
+          <svg viewBox="0 0 400 400" className="w-full h-full max-w-[400px]">
+            <motion.path
+              d={statePaths[state] || statePaths['West Bengal']}
+              fill={prediction?.seats?.[0]?.color || '#1e293b'}
+              fillOpacity={0.2}
+              stroke="#6366f1"
+              strokeWidth={2}
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+            />
+            {/* Overlay interactive regions */}
+            {prediction?.constituencies?.map((ac, i) => {
+              const angle = (i / (prediction.constituencies.length)) * Math.PI * 2;
+              const r = 80;
+              const x = 200 + Math.cos(angle) * r;
+              const y = 200 + Math.sin(angle) * r;
+              
+              return (
+                <motion.circle
+                  key={ac.id}
+                  cx={x} cy={y} r={15}
+                  fill={ac.color}
+                  fillOpacity={hoveredRegion === ac.id ? 1 : 0.7}
+                  stroke="#fff"
+                  strokeWidth={hoveredRegion === ac.id ? 2 : 0}
+                  onHoverStart={() => setHoveredRegion(ac.id)}
+                  onHoverEnd={() => setHoveredRegion(null)}
+                  whileHover={{ scale: 1.2 }}
+                  className="cursor-pointer"
+                />
+              );
+            })}
+          </svg>
+
+          {hoveredRegion !== null && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="absolute top-4 right-4 glass-panel p-4 z-20 min-w-[200px] border-indigo-500/30"
+            >
+              {(() => {
+                const ac = prediction?.constituencies?.find(c => c.id === hoveredRegion);
+                return (
+                  <>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Constituency #{ac?.id + 100}</p>
+                    <h4 className="text-lg font-bold text-white mb-2">{ac?.name}</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400">Predicted Winner</span>
+                        <span className="text-xs font-bold" style={{ color: ac?.color }}>{ac?.winner}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-slate-400">Confidence</span>
+                        <span className="text-xs font-bold text-white">{ac?.prob}%</span>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </motion.div>
+          )}
         </div>
       </div>
-      
-      <div className="relative h-full flex items-center justify-center">
-        <svg viewBox="0 0 400 400" className="w-full h-full max-w-[400px]">
-          {[...Array(20)].map((_, i) => {
-            const row = Math.floor(i / 5);
-            const col = i % 5;
-            const x = 50 + col * 60;
-            const y = 50 + row * 60;
-            // Map colors based on state data
-            const partyIdx = (i + state.length) % (prediction?.seats?.length || 1);
-            const winner = prediction?.seats?.[partyIdx];
-            return (
-              <motion.rect
-                key={i}
-                x={x} y={y} width={50} height={50} rx={8}
-                fill={winner?.color || '#1e293b'}
-                fillOpacity={hoveredRegion === i ? 1 : 0.6}
-                stroke="#ffffff10"
-                strokeWidth={2}
-                onHoverStart={() => setHoveredRegion(i)}
-                onHoverEnd={() => setHoveredRegion(null)}
-                whileHover={{ scale: 1.1, zIndex: 10 }}
-                className="cursor-pointer transition-colors"
-              />
-            );
-          })}
-        </svg>
-
-        {hoveredRegion !== null && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute top-4 right-4 glass-panel p-4 z-20 min-w-[200px] border-indigo-500/30"
-          >
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Constituency #{hoveredRegion + 101}</p>
-            <h4 className="text-lg font-bold text-white mb-2">{state} Region {hoveredRegion + 1}</h4>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Predicted Winner</span>
-                <span className="text-xs font-bold text-indigo-400">{prediction?.seats?.[(hoveredRegion + state.length) % prediction?.seats?.length]?.name}</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-400">Confidence</span>
-                <span className="text-xs font-bold text-white">{70 + (hoveredRegion % 25)}%</span>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="p-10 space-y-10 animate-fade-in">
@@ -128,7 +154,7 @@ const Overview = () => {
 
         <div className="glass-panel p-2 flex flex-wrap items-center gap-4">
           <select 
-            value={state} onChange={(e) => { setState(e.target.value); setPrediction(null); }}
+            value={state} onChange={(e) => { setState(e.target.value); }}
             className="bg-slate-900 text-white font-bold text-sm outline-none px-4 py-2 rounded-lg border border-white/10"
           >
             {['West Bengal', 'Assam', 'Tamil Nadu', 'Kerala'].map(s => <option key={s} value={s} className="bg-slate-900 text-white">{s}</option>)}
