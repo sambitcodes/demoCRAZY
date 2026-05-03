@@ -41,8 +41,8 @@ const ConstituencyDetail = () => {
           party: winner,
           color: color,
           margin: margin,
-          total_votes: 217986 if isBankura else 1250000,
-          turnout: 80.79 if isBankura else 82.4,
+          total_votes: isBankura ? 217986 : 1250000,
+          turnout: isBankura ? 80.79 : 82.4,
           confidence: prob,
           swing: swing,
           demographics: [
