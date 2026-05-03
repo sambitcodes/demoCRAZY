@@ -4,17 +4,24 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
-import { MapContainer, TileLayer, GeoJSON, Tooltip as MapTooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
-  Vote, TrendingUp, Users, MapPin, Loader2, Sparkles, Activity, Zap, 
-  Info, Database, Calendar, Brain, Settings, Map, ChevronRight, Search,
+  TrendingUp, MapPin, Loader2, Activity, Zap, 
+  Database, Brain, Map, Search,
   ArrowUpRight, ArrowDownRight, Layers, LayoutDashboard
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
 import axios from 'axios';
 
-// State bounding boxes for map centering
+// Constant seat totals — never change regardless of simulation
+const TOTAL_SEATS = {
+  'West Bengal': 294,
+  'Assam': 126,
+  'Tamil Nadu': 234,
+  'Kerala': 140,
+};
+
 const STATE_MAP_CONFIG = {
   'West Bengal': { center: [23.5, 87.8], zoom: 7 },
   'Assam':       { center: [26.2, 92.9], zoom: 7 },
@@ -22,17 +29,23 @@ const STATE_MAP_CONFIG = {
   'Kerala':      { center: [10.5, 76.5], zoom: 7 },
 };
 
+const ALL_STATES = ['West Bengal', 'Assam', 'Tamil Nadu', 'Kerala'];
+
 const Overview = () => {
   const [state, setState] = useState('West Bengal');
-  const [year, setYear] = useState(2026);
-  const [model, setModel] = useState('ensemble');
-  const [options, setOptions] = useState(['seats', 'probabilities', 'map', 'constituency']);
+  const [year] = useState(2026);
+  const [model] = useState('ensemble');
+  const [options] = useState(['seats', 'probabilities', 'map', 'constituency']);
   const [loading, setLoading] = useState(false);
-  const [prediction, setPrediction] = useState(null);
+
+  // Per-state predictions map: { 'West Bengal': {...data}, 'Kerala': {...data}, ... }
+  const [predictions, setPredictions] = useState({});
   const [selectedConstituency, setSelectedConstituency] = useState(null);
   const [stateGeoJSON, setStateGeoJSON] = useState(null);
 
-  // Fetch India state GeoJSON for map on mount
+  // The prediction for the *currently selected* state (null if not yet simulated)
+  const prediction = predictions[state] ?? null;
+
   useEffect(() => {
     fetch('https://raw.githubusercontent.com/geohacker/india/master/state/india_state.geojson')
       .then(r => r.json())
@@ -40,20 +53,25 @@ const Overview = () => {
       .catch(() => setStateGeoJSON(null));
   }, []);
 
+  const handleStateChange = (newState) => {
+    setState(newState);
+    setSelectedConstituency(null);
+  };
+
   const handlePredict = async () => {
     setLoading(true);
-    setPrediction(null);
     setSelectedConstituency(null);
+    setPredictions(prev => ({ ...prev, [state]: null }));
     try {
       const backendUrl = `http://${window.location.hostname}:8000`;
       const response = await axios.post(`${backendUrl}/predict/seats`, {
         state,
         year,
         model_type: model,
-        options
+        options,
       }, { timeout: 15000 });
       if (response.data) {
-        setPrediction(response.data);
+        setPredictions(prev => ({ ...prev, [state]: response.data }));
       }
     } catch (err) {
       console.error('Simulation error:', err);
@@ -62,18 +80,11 @@ const Overview = () => {
     }
   };
 
-  const getTargetSeats = (s) => {
-    const targets = { 'West Bengal': 294, 'Assam': 126, 'Tamil Nadu': 234, 'Kerala': 140 };
-    return targets[s] || 0;
-  };
-
-  // Build a colour lookup: partyName -> color from current prediction
   const partyColorMap = {};
   if (prediction?.seats) {
     prediction.seats.forEach(p => { partyColorMap[p.name] = p.color; });
   }
 
-  // Style function for GeoJSON layer – highlight the selected state
   const geoJSONStyle = (feature) => {
     const name = feature.properties.NAME_1 || feature.properties.ST_NM || '';
     const isSelected = name === state;
@@ -124,12 +135,13 @@ const Overview = () => {
           )}
         </MapContainer>
       </div>
-      {/* Legend note */}
       <p className="text-[10px] text-slate-600 mt-2 text-center">
-        Map shows {state} highlighted. Regional hotspots and constituency markers are active in the focus panel →
+        Map shows {state} highlighted. Regional hotspots and constituency details are active in the focus panel →
       </p>
     </div>
   );
+
+  const simulatedStates = Object.keys(predictions).filter(s => predictions[s] !== null);
 
   return (
     <div className="p-10 space-y-10 animate-fade-in">
@@ -139,59 +151,113 @@ const Overview = () => {
             Platform <span className="text-indigo-500">Summary</span>
           </h2>
           <p className="text-slate-400 text-lg">Comprehensive electoral intelligence and predictive diagnostics.</p>
+          {simulatedStates.length > 0 && (
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span className="text-[10px] text-slate-600 uppercase tracking-widest">Simulated:</span>
+              {simulatedStates.map(s => (
+                <button
+                  key={s}
+                  onClick={() => handleStateChange(s)}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${
+                    s === state
+                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
+                      : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="glass-panel p-2 flex flex-wrap items-center gap-4">
-          <select 
+          <select
             value={state}
-            onChange={(e) => setState(e.target.value)}
+            onChange={(e) => handleStateChange(e.target.value)}
             className="bg-slate-900 text-white font-bold text-sm outline-none px-4 py-2 rounded-lg border border-white/10"
           >
-            {['West Bengal', 'Assam', 'Tamil Nadu', 'Kerala'].map(s => (
+            {ALL_STATES.map(s => (
               <option key={s} value={s} className="bg-slate-900 text-white">{s}</option>
             ))}
           </select>
           <div className="w-[1px] h-8 bg-white/10" />
-          <button 
+          <button
             onClick={handlePredict}
             disabled={loading}
             className="btn-premium flex items-center space-x-2 py-2.5 px-6"
           >
             {loading ? <Loader2 className="animate-spin" size={18} /> : <Zap size={18} />}
-            <span>{loading ? 'Processing...' : 'Run Simulation'}</span>
+            <span>{loading ? 'Processing...' : `Run Simulation`}</span>
           </button>
         </div>
       </section>
 
-      {/* Stat cards — show --- until a simulation has run */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <StatCard title="Total Seats" value={(prediction?.total_seats || getTargetSeats(state)).toString()} icon={MapPin} color="indigo" />
-        <StatCard title="Leading Party" value={prediction?.leading_party ?? '---'} icon={TrendingUp} color="emerald" />
-        <StatCard title="Mean Probability" value={prediction?.mean_probability != null ? `${prediction.mean_probability}%` : '---'} icon={Brain} color="purple" />
-        <StatCard title="Swing Factor" value={prediction?.swing_factor != null ? `${prediction.swing_factor > 0 ? '+' : ''}${prediction.swing_factor}%` : '---'} icon={Activity} color="rose" />
-        <StatCard title="Simulation ID" value={prediction?.simulation_id ?? '---'} icon={Database} color="blue" />
+        <StatCard 
+          title="Total Seats" 
+          value={(prediction?.total_seats || TOTAL_SEATS[state] || 0).toString()} 
+          icon={MapPin} 
+          color="indigo" 
+        />
+        <StatCard 
+          title="Leading Party" 
+          value={prediction?.leading_party ?? '---'} 
+          icon={TrendingUp} 
+          color="emerald" 
+        />
+        <StatCard 
+          title="Mean Probability" 
+          value={prediction?.mean_probability != null ? `${prediction.mean_probability}%` : '---'} 
+          icon={Brain} 
+          color="purple" 
+        />
+        <StatCard 
+          title="Swing Factor" 
+          value={prediction?.swing_factor != null ? `${prediction.swing_factor > 0 ? '+' : ''}${prediction.swing_factor}%` : '---'} 
+          icon={Activity} 
+          color="rose" 
+        />
+        <StatCard 
+          title="Simulation ID" 
+          value={prediction?.simulation_id ?? '---'} 
+          icon={Database} 
+          color="blue" 
+        />
       </div>
 
       <AnimatePresence mode="wait">
         {!prediction ? (
-          <motion.div 
-            key="empty"
+          <motion.div
+            key={`empty-${state}`}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             className="glass-panel p-32 flex flex-col items-center justify-center text-center border-dashed border-white/10"
           >
             <LayoutDashboard size={64} className="text-slate-700 mb-6" />
-            <h3 className="text-2xl font-bold text-white mb-2">Awaiting Intelligence Feed</h3>
-            <p className="text-slate-500">Select a state and click 'Run Simulation' to populate the analysis panels.</p>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              No simulation yet for {state}
+            </h3>
+            <p className="text-slate-500">
+              Click <span className="text-indigo-400 font-semibold">Run Simulation</span> to generate results for this state.
+              {simulatedStates.filter(s => s !== state).length > 0 && (
+                <span className="block mt-1 text-slate-600">
+                  Other simulated states: {simulatedStates.filter(s => s !== state).join(', ')}
+                </span>
+              )}
+            </p>
           </motion.div>
         ) : (
-          <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+          <motion.div key={`results-${state}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
 
-            {/* Seat Distribution + Vote Share */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               <div className="lg:col-span-8 glass-panel p-8">
                 <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-xl font-bold uppercase tracking-widest text-slate-400">Seat Distribution</h3>
-                  <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">95% Confidence</span>
+                  <h3 className="text-xl font-bold uppercase tracking-widest text-slate-400">
+                    Seat Distribution — {state}
+                  </h3>
+                  <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
+                    {prediction.simulation_id}
+                  </span>
                 </div>
                 <div className="h-[300px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -199,7 +265,10 @@ const Overview = () => {
                       <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
                       <XAxis dataKey="name" stroke="#475569" fontSize={12} axisLine={false} tickLine={false} />
                       <YAxis stroke="#475569" fontSize={12} axisLine={false} tickLine={false} />
-                      <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px' }} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                        contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px' }}
+                      />
                       <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={60}>
                         {prediction.seats.map((e, i) => <Cell key={i} fill={e.color} />)}
                       </Bar>
@@ -213,8 +282,8 @@ const Overview = () => {
                 <div className="h-[250px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie 
-                        data={prediction.seats} dataKey="vote_share" nameKey="name" 
+                      <Pie
+                        data={prediction.seats} dataKey="vote_share" nameKey="name"
                         cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5}
                       >
                         {prediction.seats.map((e, i) => <Cell key={i} fill={e.color} />)}
@@ -234,7 +303,6 @@ const Overview = () => {
               </div>
             </div>
 
-            {/* Map + Constituency Focus */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               <div className="lg:col-span-7">
                 {renderMap()}
@@ -250,7 +318,7 @@ const Overview = () => {
 
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
                   {prediction.constituencies?.map(ac => (
-                    <motion.div 
+                    <motion.div
                       key={ac.id}
                       whileHover={{ x: 4 }}
                       onClick={() => setSelectedConstituency(prev => prev?.id === ac.id ? null : ac)}
@@ -277,7 +345,6 @@ const Overview = () => {
                         <span className="text-slate-400">Prob: <span className="text-indigo-400 font-bold">{ac.prob}%</span></span>
                       </div>
 
-                      {/* Expanded detail panel */}
                       <AnimatePresence>
                         {selectedConstituency?.id === ac.id && (
                           <motion.div
@@ -319,7 +386,6 @@ const Overview = () => {
               </div>
             </div>
 
-            {/* Model Comparison Table */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               <div className="lg:col-span-12 glass-panel p-8">
                 <h3 className="text-xl font-bold mb-8 flex items-center gap-2">
@@ -350,7 +416,7 @@ const Overview = () => {
                           </td>
                           <td className="py-4">
                             <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
-                              m.status === 'Optimal' || m.status === 'Stable' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'
+                              m.status === 'Stable' || m.status === 'Optimal' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'
                             }`}>
                               {m.status}
                             </span>
