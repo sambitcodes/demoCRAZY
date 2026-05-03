@@ -8,7 +8,7 @@ import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
   TrendingUp, MapPin, Loader2, Activity, Zap, 
-  Database, Brain, Map, Search,
+  Database, Brain, Map, Search, Users,
   ArrowUpRight, ArrowDownRight, Layers, LayoutDashboard
 } from 'lucide-react';
 import StatCard from '../components/StatCard';
