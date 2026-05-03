@@ -413,10 +413,16 @@ const Overview = () => {
                             </div>
 
                             <div className="flex gap-2">
-                              <button className="flex-1 bg-indigo-500 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-indigo-600 transition-colors">
+                              <button 
+                                onClick={() => window.open(`/constituency/${state}/${ac.name.toLowerCase().replace(/ /g, '-')}`, '_blank')}
+                                className="flex-1 bg-indigo-500 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-indigo-600 transition-colors"
+                              >
                                 Detailed Analysis
                               </button>
-                              <button className="flex-1 bg-white/10 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-white/20 transition-colors">
+                              <button 
+                                onClick={() => window.open(`/constituency/${state}/${ac.name.toLowerCase().replace(/ /g, '-')}`, '_blank')}
+                                className="flex-1 bg-white/10 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-white/20 transition-colors"
+                              >
                                 Historical
                               </button>
                             </div>

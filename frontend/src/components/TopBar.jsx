@@ -65,6 +65,10 @@ const TopBar = () => {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
+                    onClick={() => {
+                      window.open(`/constituency/${res.state}/${res.name.toLowerCase().replace(/ /g, '-')}`, '_blank');
+                      setQuery('');
+                    }}
                     className="p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group"
                   >
                     <div className="flex justify-between items-start">

@@ -6,6 +6,7 @@ import Sentiment from './pages/Sentiment'
 import Simulations from './pages/Simulations'
 import Historical from './pages/Historical'
 import Analytics from './pages/Analytics'
+import ConstituencyDetail from './pages/ConstituencyDetail'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/sentiment" element={<Sentiment />} />
           <Route path="/historical" element={<Historical />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/constituency/:state/:id" element={<ConstituencyDetail />} />
         </Routes>
       </Layout>
     </Router>
