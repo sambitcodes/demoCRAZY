@@ -414,13 +414,35 @@ const Overview = () => {
 
                             <div className="flex gap-2">
                               <button 
-                                onClick={() => window.open(`/constituency/${state}/${ac.name.toLowerCase().replace(/ /g, '-')}`, '_blank')}
+                                onClick={() => {
+                                  const params = new URLSearchParams({
+                                    candidate: ac.candidate,
+                                    winner: ac.winner,
+                                    color: ac.color,
+                                    margin: ac.margin,
+                                    prob: ac.prob,
+                                    swing: ac.swing,
+                                    demographic: ac.demographic
+                                  }).toString();
+                                  window.open(`/constituency/${state}/${ac.name.toLowerCase().replace(/ /g, '-')}?${params}`, '_blank');
+                                }}
                                 className="flex-1 bg-indigo-500 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-indigo-600 transition-colors"
                               >
                                 Detailed Analysis
                               </button>
                               <button 
-                                onClick={() => window.open(`/constituency/${state}/${ac.name.toLowerCase().replace(/ /g, '-')}`, '_blank')}
+                                onClick={() => {
+                                  const params = new URLSearchParams({
+                                    candidate: ac.candidate,
+                                    winner: ac.winner,
+                                    color: ac.color,
+                                    margin: ac.margin,
+                                    prob: ac.prob,
+                                    swing: ac.swing,
+                                    demographic: ac.demographic
+                                  }).toString();
+                                  window.open(`/constituency/${state}/${ac.name.toLowerCase().replace(/ /g, '-')}?${params}`, '_blank');
+                                }}
                                 className="flex-1 bg-white/10 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-white/20 transition-colors"
                               >
                                 Historical

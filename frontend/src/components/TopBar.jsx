@@ -66,7 +66,16 @@ const TopBar = () => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: idx * 0.05 }}
                     onClick={() => {
-                      window.open(`/constituency/${res.state}/${res.name.toLowerCase().replace(/ /g, '-')}`, '_blank');
+                      const params = new URLSearchParams({
+                        candidate: res.candidate,
+                        winner: res.winner,
+                        color: res.color,
+                        margin: res.margin,
+                        prob: res.prob,
+                        swing: 0, // Search results don't have swing in mock
+                        demographic: "General"
+                      }).toString();
+                      window.open(`/constituency/${res.state}/${res.name.toLowerCase().replace(/ /g, '-')}?${params}`, '_blank');
                       setQuery('');
                     }}
                     className="p-3 hover:bg-white/5 rounded-xl transition-colors cursor-pointer group"

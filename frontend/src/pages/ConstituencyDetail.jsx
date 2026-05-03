@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Users, TrendingUp, MapPin, Activity, 
@@ -13,41 +13,50 @@ import axios from 'axios';
 
 const ConstituencyDetail = () => {
   const { state, id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // For now, we simulate fetching detailed data
-    // In a real app, you'd have a /constituency/:id endpoint
     const fetchDetail = async () => {
       setLoading(true);
       try {
-        // Mocking a deep dive data structure
+        // Read parameters passed from the main dashboard
+        const candidate = searchParams.get('candidate') || "Local Candidate";
+        const winner = searchParams.get('winner') || "TBD";
+        const color = searchParams.get('color') || "#6366f1";
+        const margin = parseInt(searchParams.get('margin')) || 15000;
+        const prob = parseInt(searchParams.get('prob')) || 85;
+        const swing = parseFloat(searchParams.get('swing')) || 0;
+        const demographic = searchParams.get('demographic') || "General";
+
+        const isBankura = id.toLowerCase().includes('bankura');
+        
         const mockData = {
           id: id,
           name: id.replace(/-/g, ' '),
           state: state,
-          candidate: "Sujit Mitra",
-          party: "TMC",
-          color: "#6366f1",
-          margin: 34500,
-          total_votes: 1250000,
-          turnout: 82.4,
-          confidence: 94,
-          swing: 4.2,
+          candidate: candidate,
+          party: winner,
+          color: color,
+          margin: margin,
+          total_votes: 217986 if isBankura else 1250000,
+          turnout: 80.79 if isBankura else 82.4,
+          confidence: prob,
+          swing: swing,
           demographics: [
-            { category: "Urban Youth", value: 35, trend: "up" },
-            { category: "Rural Farmers", value: 28, trend: "down" },
-            { category: "Industrial", value: 22, trend: "stable" },
-            { category: "Others", value: 15, trend: "up" }
+            { category: demographic, value: 45, trend: "up" },
+            { category: "Urban Youth", value: 25, trend: "up" },
+            { category: "Rural Farmers", value: 20, trend: "down" },
+            { category: "Others", value: 10, trend: "stable" }
           ],
           historical: [
-            { year: 2014, votes: 420000, winner: "INC" },
-            { year: 2016, votes: 480000, winner: "TMC" },
-            { year: 2019, votes: 550000, winner: "TMC" },
-            { year: 2021, votes: 610000, winner: "TMC" },
-            { year: 2026, votes: 685000, winner: "TMC" }
+            { year: 2014, votes: 120000, winner: "INC" },
+            { year: 2016, votes: 150000, winner: "TMC" },
+            { year: 2019, votes: 180000, winner: "BJP" },
+            { year: 2021, votes: isBankura ? 95466 : 190000, winner: isBankura ? "BJP (Niladri Dana)" : "TMC" },
+            { year: 2026, votes: isBankura ? 110000 : 210000, winner: winner }
           ],
           topic_scores: [
             { topic: "Development", score: 88 },
@@ -124,8 +133,10 @@ const ConstituencyDetail = () => {
                 <p className="text-2xl font-black text-white">{data.confidence}%</p>
               </div>
               <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Swing</p>
-                <p className="text-2xl font-black text-emerald-400">+{data.swing}%</p>
+                <p className="text-[10px] font-black text-slate-500 uppercase mb-1">Swing Factor</p>
+                <p className={`text-2xl font-black ${data.swing >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {data.swing >= 0 ? '+' : ''}{data.swing}%
+                </p>
               </div>
             </div>
           </section>

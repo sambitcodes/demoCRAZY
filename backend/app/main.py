@@ -80,6 +80,30 @@ REAL_CONSTITUENCIES = {
     ],
 }
 
+STATE_CANDIDATES = {
+    "West Bengal": {
+        "TMC": ["Sayantika Banerjee", "Sujit Mitra", "Partha Bhowmick", "Abhishek Banerjee", "Mahua Moitra"],
+        "BJP": ["Niladri Sekhar Dana", "Dilip Ghosh", "Suvendu Adhikari", "Locket Chatterjee", "Agnimitra Paul"],
+        "INC+": ["Adhir Ranjan Chowdhury", "Isha Khan Choudhury", "Pradip Bhattacharya"],
+        "Others": ["Minakshi Mukherjee", "Srijan Bhattacharya"]
+    },
+    "Assam": {
+        "BJP+": ["Himanta Biswa Sarma", "Sarbananda Sonowal", "Pijush Hazarika"],
+        "INC+": ["Gaurav Gogoi", "Debabrata Saikia"],
+        "AIUDF": ["Badruddin Ajmal"]
+    },
+    "Tamil Nadu": {
+        "DMK+": ["M.K. Stalin", "Udhayanidhi Stalin", "Kanimozhi"],
+        "AIADMK+": ["Edappadi K. Palaniswami", "O. Panneerselvam"],
+        "NTK": ["Seeman"],
+        "Others": ["Annamalai"]
+    },
+    "Kerala": {
+        "LDF": ["Pinarayi Vijayan", "K.K. Shailaja", "M.V. Govindan"],
+        "UDF": ["V.D. Satheesan", "Shashi Tharoor", "Ramesh Chennithala"]
+    }
+}
+
 STATE_HOTSPOTS = {
     "West Bengal": ["Kolkata North", "Asansol", "Siliguri", "Darjeeling"],
     "Assam": ["Guwahati", "Dibrugarh", "Silchar", "Tezpur"],
@@ -386,24 +410,30 @@ async def predict_seats(request: PredictionRequest):
         })
 
     state_ac_list = REAL_CONSTITUENCIES.get(req_state, ["Constituency A", "Constituency B"])
-    candidates = ["Rajesh Kumar", "Anjali Das", "Sujit Mitra", "Priya Singh", "Amit Shah", "Rahul Gandhi", "Mamata Banerjee"]
+    state_cands = STATE_CANDIDATES.get(req_state, {})
     demographics = ["Urban Youth", "Rural Farmers", "Industrial Workers", "Service Sector", "Vocal Minority"]
     
     constituencies = []
     # Use as many real constituencies as available, up to 24
     num_to_gen = min(len(state_ac_list), 24)
     for i in range(num_to_gen):
-        w_party = rng.choice(parties)
+        w_party_obj = rng.choice(parties)
+        w_party_name = w_party_obj["name"]
+        
+        # Consistent candidate selection
+        cand_pool = state_cands.get(w_party_name, ["Local Leader"])
+        cand_name = rng.choice(cand_pool)
+        
         constituencies.append({
             "id": i + 1,
             "name": state_ac_list[i],
-            "winner": w_party["name"],
-            "candidate": rng.choice(candidates),
+            "winner": w_party_name,
+            "candidate": cand_name,
             "prob": rng.randint(65, 99),
             "swing": round(rng.uniform(-8, 8), 1),
             "margin": rng.randint(5000, 45000),
             "demographic": rng.choice(demographics),
-            "color": w_party["color"],
+            "color": w_party_obj["color"],
         })
 
     return {
@@ -437,15 +467,20 @@ async def search_all(q: str = ""):
     
     for state in states:
         state_acs = REAL_CONSTITUENCIES.get(state, [])
+        state_cands = STATE_CANDIDATES.get(state, {})
+        
         for i, ac_name in enumerate(state_acs):
-            cand = candidates[i % len(candidates)]
+            # Pick a party first for search consistency
+            party = parties[i % len(parties)]
+            cand_pool = state_cands.get(party, ["Local Leader"])
+            cand = cand_pool[i % len(cand_pool)]
             
             if q.lower() in ac_name.lower() or q.lower() in cand.lower():
                 all_results.append({
                     "name": ac_name,
                     "state": state,
                     "candidate": cand,
-                    "winner": parties[i % len(parties)],
+                    "winner": party,
                     "prob": rng.randint(60, 99),
                     "margin": rng.randint(5000, 50000),
                     "color": "#6366f1" if i % 2 == 0 else "#f59e0b"
