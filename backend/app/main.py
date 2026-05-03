@@ -276,11 +276,41 @@ async def predict_seats(request: PredictionRequest):
             detail=f"State '{req_state}' not supported. Supported: {list(party_map.keys())}"
         )
 
-    parties = []
+    # Fixed absolute total seats per state
+    state_totals = {
+        "West Bengal": 294,
+        "Assam": 126,
+        "Tamil Nadu": 234,
+        "Kerala": 140
+    }
+    target_total = state_totals.get(req_state, 100)
+
+    # Generate proportions with state-specific variance
+    raw_values = []
     for p in state_data:
-        var = max(1, int(p["base_seats"] * 0.15))
-        final_seats = int(p["base_seats"] + rng.uniform(-var, var))
-        parties.append({"name": p["name"], "value": final_seats, "color": p["color"]})
+        # Variance around the base seats
+        var = max(1, int(p["base_seats"] * 0.12))
+        raw_val = max(1, p["base_seats"] + rng.uniform(-var, var))
+        raw_values.append(raw_val)
+    
+    # Normalize to fixed total
+    total_raw = sum(raw_values)
+    parties = []
+    for i, p in enumerate(state_data):
+        allocated_seats = int((raw_values[i] / total_raw) * target_total)
+        parties.append({
+            "name": p["name"],
+            "value": allocated_seats,
+            "color": p["color"]
+        })
+    
+    # Handle rounding differences to ensure exact total
+    current_total = sum(p["value"] for p in parties)
+    diff = target_total - current_total
+    if diff != 0:
+        # Give/take difference to the leading party
+        sorted_indices = sorted(range(len(parties)), key=lambda i: parties[i]["value"], reverse=True)
+        parties[sorted_indices[0]]["value"] += diff
 
     total_seats = sum(p["value"] for p in parties)
     for p in parties:
