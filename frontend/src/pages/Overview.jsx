@@ -267,7 +267,9 @@ const Overview = () => {
                       <YAxis stroke="#475569" fontSize={12} axisLine={false} tickLine={false} />
                       <Tooltip
                         cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                        contentStyle={{ background: '#0f172a', border: 'none', borderRadius: '12px' }}
+                        contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                        itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
                       />
                       <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={60}>
                         {prediction.seats.map((e, i) => <Cell key={i} fill={e.color} />)}
@@ -288,7 +290,11 @@ const Overview = () => {
                       >
                         {prediction.seats.map((e, i) => <Cell key={i} fill={e.color} />)}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip 
+                        contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                        itemStyle={{ color: '#fff', fontWeight: 'bold' }}
+                        labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
