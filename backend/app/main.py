@@ -398,3 +398,38 @@ async def predict_seats(request: PredictionRequest):
         "model_comparison": model_comparison,
         "constituencies": constituencies,
     }
+
+
+@app.get("/search")
+async def search_all(q: str = ""):
+    """Global search across all states and constituencies."""
+    if not q or len(q) < 2:
+        return []
+    
+    # We'll use a fixed seed for search to keep results stable
+    rng = random.Random("global-search-seed")
+    all_results = []
+    
+    # Mock data generation similar to predict_seats but for all states
+    states = ["West Bengal", "Assam", "Tamil Nadu", "Kerala"]
+    names = ["North District", "South Coast", "Central Hub", "East Range", "West Valley", "Metro Core", "Rural Belt", "Hill AC"]
+    candidates = ["Rajesh Kumar", "Anjali Das", "Sujit Mitra", "Priya Singh", "Amit Shah", "Rahul Gandhi", "Mamata Banerjee"]
+    parties = ["TMC", "BJP", "INC+", "DMK+", "AIADMK+", "LDF", "UDF"]
+    
+    for state in states:
+        for i in range(8):
+            ac_name = f"{state} {names[i]}"
+            cand = candidates[i % len(candidates)]
+            
+            if q.lower() in ac_name.lower() or q.lower() in cand.lower():
+                all_results.append({
+                    "name": ac_name,
+                    "state": state,
+                    "candidate": cand,
+                    "winner": parties[i % len(parties)],
+                    "prob": rng.randint(60, 99),
+                    "margin": rng.randint(5000, 50000),
+                    "color": "#6366f1" if i % 2 == 0 else "#f59e0b"
+                })
+    
+    return all_results[:10]
