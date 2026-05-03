@@ -369,6 +369,9 @@ async def predict_seats(request: PredictionRequest):
         "West Valley", "Metro Core", "Rural Belt", "Hill AC",
         "Industrial Zone", "Riverside", "Border AC", "Garden City"
     ]
+    candidates = ["Rajesh Kumar", "Anjali Das", "Sujit Mitra", "Priya Singh", "Amit Shah", "Rahul Gandhi", "Mamata Banerjee"]
+    demographics = ["Urban Youth", "Rural Farmers", "Industrial Workers", "Service Sector", "Vocal Minority"]
+    
     constituencies = []
     for i in range(12):
         w_party = rng.choice(parties)
@@ -376,8 +379,11 @@ async def predict_seats(request: PredictionRequest):
             "id": i + 1,
             "name": f"{req_state} {names[i]}",
             "winner": w_party["name"],
+            "candidate": rng.choice(candidates),
             "prob": rng.randint(65, 99),
             "swing": round(rng.uniform(-8, 8), 1),
+            "margin": rng.randint(5000, 45000),
+            "demographic": rng.choice(demographics),
             "color": w_party["color"],
         })
 

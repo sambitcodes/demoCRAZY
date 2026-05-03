@@ -42,6 +42,7 @@ const Overview = () => {
   const [predictions, setPredictions] = useState({});
   const [selectedConstituency, setSelectedConstituency] = useState(null);
   const [stateGeoJSON, setStateGeoJSON] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // The prediction for the *currently selected* state (null if not yet simulated)
   const prediction = predictions[state] ?? null;
@@ -319,11 +320,23 @@ const Overview = () => {
                   <h3 className="text-xl font-bold flex items-center gap-2 text-white">
                     <Search className="text-indigo-400" /> Constituency Focus
                   </h3>
-                  <span className="text-xs text-slate-500">{prediction.constituencies?.length} ACs</span>
+                  <div className="relative group">
+                    <input 
+                      type="text"
+                      placeholder="Search AC or Candidate..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="bg-white/5 border border-white/10 rounded-lg py-1.5 px-3 pl-8 text-xs focus:ring-1 focus:ring-indigo-500 outline-none transition-all w-48 focus:w-64"
+                    />
+                    <Search size={14} className="absolute left-2.5 top-2.5 text-slate-500" />
+                  </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar">
-                  {prediction.constituencies?.map(ac => (
+                  {prediction.constituencies?.filter(ac => 
+                    ac.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    ac.candidate.toLowerCase().includes(searchTerm.toLowerCase())
+                  ).map(ac => (
                     <motion.div
                       key={ac.id}
                       whileHover={{ x: 4 }}
@@ -357,31 +370,55 @@ const Overview = () => {
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="mt-3 pt-3 border-t border-white/10 space-y-2 overflow-hidden"
+                            className="mt-4 pt-4 border-t border-white/10 space-y-4 overflow-hidden"
                           >
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="bg-black/20 rounded-lg p-2 text-center">
-                                <p className="text-[9px] text-slate-500 uppercase mb-1">Confidence</p>
-                                <p className="text-lg font-black text-white">{ac.prob}%</p>
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Lead Candidate</p>
+                                <p className="text-sm font-bold text-white flex items-center gap-1.5">
+                                  <Users size={14} className="text-indigo-400" /> {ac.candidate}
+                                </p>
                               </div>
-                              <div className="bg-black/20 rounded-lg p-2 text-center">
-                                <p className="text-[9px] text-slate-500 uppercase mb-1">Swing</p>
-                                <p className={`text-lg font-black ${ac.swing > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              <div className="text-right">
+                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Focus Group</p>
+                                <p className="text-[10px] font-bold text-slate-300 bg-white/5 px-2 py-0.5 rounded-full">{ac.demographic}</p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <div className="flex justify-between items-end">
+                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Victory Margin</p>
+                                <p className="text-xs font-black text-white">{ac.margin.toLocaleString()} votes</p>
+                              </div>
+                              <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <motion.div 
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${(ac.margin / 50000) * 100}%` }}
+                                  className="h-full bg-indigo-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="bg-black/20 rounded-lg p-3 text-center border border-white/5">
+                                <p className="text-[9px] text-slate-500 uppercase mb-1 font-bold">Confidence</p>
+                                <p className="text-xl font-black text-white">{ac.prob}%</p>
+                              </div>
+                              <div className="bg-black/20 rounded-lg p-3 text-center border border-white/5">
+                                <p className="text-[9px] text-slate-500 uppercase mb-1 font-bold">Swing</p>
+                                <p className={`text-xl font-black ${ac.swing > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                                   {ac.swing > 0 ? '+' : ''}{ac.swing}%
                                 </p>
                               </div>
                             </div>
-                            <div className="bg-black/20 rounded-lg p-2 flex justify-between items-center">
-                              <span className="text-xs text-slate-400">Projected Winner</span>
-                              <span className="text-xs font-black px-2 py-0.5 rounded" style={{ backgroundColor: `${ac.color}25`, color: ac.color }}>
-                                {ac.winner}
-                              </span>
-                            </div>
-                            <div className="bg-black/20 rounded-lg p-2 flex justify-between items-center">
-                              <span className="text-xs text-slate-400">Status</span>
-                              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                                ac.prob >= 80 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-                              }`}>{ac.prob >= 80 ? 'Safe' : 'Marginal'}</span>
+
+                            <div className="flex gap-2">
+                              <button className="flex-1 bg-indigo-500 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-indigo-600 transition-colors">
+                                Detailed Analysis
+                              </button>
+                              <button className="flex-1 bg-white/10 text-white text-[10px] font-black uppercase py-2 rounded-lg hover:bg-white/20 transition-colors">
+                                Historical
+                              </button>
                             </div>
                           </motion.div>
                         )}
