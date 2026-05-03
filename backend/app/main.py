@@ -212,6 +212,7 @@ async def predict_seats(request: PredictionRequest):
     return {
         "simulation_id": f"SIM-{random.randint(10000, 99999)}",
         "state": req_state,
+        "total_seats": sum(p["value"] for p in parties),
         "leading_party": leading_party,
         "mean_probability": rng.randint(86, 96),
         "swing_factor": round(rng.uniform(-6.0, 6.0), 1),

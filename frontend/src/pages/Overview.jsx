@@ -104,22 +104,24 @@ const Overview = () => {
             />
             {/* Interactive Constituency Points distributed within the state shape */}
             {prediction?.constituencies?.map((ac, i) => {
-              // Deterministic but "random-looking" points inside a 400x400 box
-              // We'll use a spiral distribution for better coverage
-              const angle = i * 2.4;
-              const r = 15 + i * 12;
-              const x = 200 + Math.cos(angle) * r;
-              const y = 220 + Math.sin(angle) * r;
+              // Stable coordinate mapping
+              const coords = [
+                {x: 180, y: 100}, {x: 220, y: 150}, {x: 160, y: 200}, 
+                {x: 240, y: 220}, {x: 190, y: 280}, {x: 130, y: 320},
+                {x: 100, y: 250}, {x: 200, y: 50}, {x: 280, y: 180},
+                {x: 150, y: 150}, {x: 210, y: 340}, {x: 80, y: 300}
+              ];
+              const {x, y} = coords[i] || {x: 200, y: 200};
               
               return (
                 <motion.g 
                   key={ac.id}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
+                  transition={{ delay: i * 0.03 }}
                 >
                   <circle
-                    cx={x} cy={y} r={hoveredRegion === ac.id ? 10 : 6}
+                    cx={x} cy={y} r={hoveredRegion === ac.id ? 10 : 7}
                     fill={ac.color}
                     className="cursor-pointer transition-all duration-300"
                     onMouseEnter={() => setHoveredRegion(ac.id)}
@@ -127,7 +129,7 @@ const Overview = () => {
                     filter={hoveredRegion === ac.id ? "url(#glow)" : "none"}
                   />
                   {hoveredRegion === ac.id && (
-                    <circle cx={x} cy={y} r={14} fill="none" stroke={ac.color} strokeWidth={1} className="animate-ping" />
+                    <circle cx={x} cy={y} r={16} fill="none" stroke={ac.color} strokeWidth={1} className="animate-ping" />
                   )}
                 </motion.g>
               );
@@ -206,11 +208,11 @@ const Overview = () => {
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <StatCard title="Total Seats" value={(getTargetSeats(state) || 0).toString()} icon={MapPin} color="indigo" />
+        <StatCard title="Total Seats" value={(prediction?.total_seats || getTargetSeats(state)).toString()} icon={MapPin} color="indigo" />
         <StatCard title="Leading Party" value={prediction?.leading_party || "---"} icon={TrendingUp} color="emerald" />
         <StatCard title="Mean Probability" value={prediction?.mean_probability ? `${prediction.mean_probability}%` : "---"} icon={Brain} color="purple" />
         <StatCard title="Swing Factor" value={prediction?.swing_factor !== undefined ? `${prediction.swing_factor > 0 ? '+' : ''}${prediction.swing_factor}%` : "---"} icon={Activity} color="rose" />
-        <StatCard title="Simulation ID" value={prediction?.simulation_id || "---"} icon={Database} color="blue" />
+        <StatCard title="Simulation ID" value={prediction?.simulation_id || prediction?.simulation_id || "---"} icon={Database} color="blue" />
       </div>
 
       <AnimatePresence mode="wait">
@@ -277,9 +279,9 @@ const Overview = () => {
                 {renderMap()}
               </div>
 
-              <div className="lg:col-span-5 glass-panel p-8 flex flex-col h-[500px]">
+              <div className="lg:col-span-5 glass-panel p-8 flex flex-col h-[600px]">
                 <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-xl font-bold flex items-center gap-2">
+                  <h3 className="text-xl font-bold flex items-center gap-2 text-white">
                     <Search className="text-indigo-400" /> Constituency Focus
                   </h3>
                 </div>
