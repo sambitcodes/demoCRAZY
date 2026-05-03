@@ -147,10 +147,10 @@ const Overview = () => {
     <div className="p-10 space-y-10 animate-fade-in">
       <section className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
         <div>
-          <h2 className="text-6xl font-black tracking-tighter text-white mb-3 uppercase">
+          <h2 className="text-3xl font-black tracking-tight text-white mb-1 uppercase">
             Platform <span className="text-indigo-500">Summary</span>
           </h2>
-          <p className="text-slate-400 text-xl font-medium">Comprehensive electoral intelligence and predictive diagnostics.</p>
+          <p className="text-slate-400 text-sm font-medium">Comprehensive electoral intelligence and predictive diagnostics.</p>
           {simulatedStates.length > 0 && (
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className="text-[10px] text-slate-600 uppercase tracking-widest">Simulated:</span>

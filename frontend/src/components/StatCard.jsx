@@ -19,8 +19,8 @@ const StatCard = ({ title, value, icon: Icon, color = 'indigo' }) => {
         <Icon size={28} />
       </div>
       <div>
-        <p className="text-slate-400 text-base font-black uppercase tracking-[0.15em]">{title}</p>
-        <h3 className="text-5xl font-black text-white mt-2 leading-none tracking-tighter">{value}</h3>
+        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em]">{title}</p>
+        <h3 className="text-2xl font-black text-white mt-0.5 tracking-tight">{value}</h3>
       </div>
     </motion.div>
   );
