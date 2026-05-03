@@ -59,6 +59,27 @@ STATE_KEYWORDS = {
     "Kerala": ["Kerala", "LDF", "UDF", "Pinarayi", "CPM Kerala", "Congress Kerala"],
 }
 
+REAL_CONSTITUENCIES = {
+    "West Bengal": [
+        "Bankura", "Bardhaman East", "Bardhaman West", "Birbhum", "Bishnupur", "Bolpur", 
+        "Cooch Behar", "Darjeeling", "Diamond Harbour", "Dum Dum", "Hooghly", "Howrah", 
+        "Jadavpur", "Jalpaiguri", "Kolkata North", "Kolkata South", "Maldaha North", 
+        "Maldaha South", "Medinipur", "Murshidabad", "Purulia", "Raiganj", "Tamluk"
+    ],
+    "Assam": [
+        "Guwahati", "Dibrugarh", "Silchar", "Tezpur", "Jorhat", "Nagaon", 
+        "Barpeta", "Dhubri", "Kokrajhar", "Lakhimpur", "Mangaldoi", "Karimganj"
+    ],
+    "Tamil Nadu": [
+        "Chennai North", "Chennai South", "Chennai Central", "Coimbatore", "Madurai", 
+        "Salem", "Tiruchirappalli", "Tirunelveli", "Vellore", "Erode", "Thoothukudi", "Kanyakumari"
+    ],
+    "Kerala": [
+        "Thiruvananthapuram", "Kochi", "Kozhikode", "Kollam", "Thrissur", "Palakkad", 
+        "Alappuzha", "Kottayam", "Malappuram", "Wayanad", "Kasaragod", "Kannur"
+    ],
+}
+
 STATE_HOTSPOTS = {
     "West Bengal": ["Kolkata North", "Asansol", "Siliguri", "Darjeeling"],
     "Assam": ["Guwahati", "Dibrugarh", "Silchar", "Tezpur"],
@@ -364,20 +385,18 @@ async def predict_seats(request: PredictionRequest):
             "status": "Stable" if conf > 90 else "Converging",
         })
 
-    names = [
-        "North District", "South Coast", "Central Hub", "East Range",
-        "West Valley", "Metro Core", "Rural Belt", "Hill AC",
-        "Industrial Zone", "Riverside", "Border AC", "Garden City"
-    ]
+    state_ac_list = REAL_CONSTITUENCIES.get(req_state, ["Constituency A", "Constituency B"])
     candidates = ["Rajesh Kumar", "Anjali Das", "Sujit Mitra", "Priya Singh", "Amit Shah", "Rahul Gandhi", "Mamata Banerjee"]
     demographics = ["Urban Youth", "Rural Farmers", "Industrial Workers", "Service Sector", "Vocal Minority"]
     
     constituencies = []
-    for i in range(12):
+    # Use as many real constituencies as available, up to 24
+    num_to_gen = min(len(state_ac_list), 24)
+    for i in range(num_to_gen):
         w_party = rng.choice(parties)
         constituencies.append({
             "id": i + 1,
-            "name": f"{req_state} {names[i]}",
+            "name": state_ac_list[i],
             "winner": w_party["name"],
             "candidate": rng.choice(candidates),
             "prob": rng.randint(65, 99),
@@ -417,8 +436,8 @@ async def search_all(q: str = ""):
     parties = ["TMC", "BJP", "INC+", "DMK+", "AIADMK+", "LDF", "UDF"]
     
     for state in states:
-        for i in range(8):
-            ac_name = f"{state} {names[i]}"
+        state_acs = REAL_CONSTITUENCIES.get(state, [])
+        for i, ac_name in enumerate(state_acs):
             cand = candidates[i % len(candidates)]
             
             if q.lower() in ac_name.lower() or q.lower() in cand.lower():
